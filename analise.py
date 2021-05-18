@@ -39,19 +39,22 @@ class AnalyseSurvey:
     questions = ("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "Q11")
     data_set_dict = dict()
     QuestionStats = dict()
+    QuestionStatsPrivate = dict()
+    QuestionStatsState = dict()
     AgeCt = dict()
 
     def __init__(self):
         self.data = create_dict(read_csv_file())
-        self.create_nominaldata_keywords()
-        self.show_nominal_datas()
-        self.calculate_all_questions_stats()
+        self._create_nominaldata_keywords()
+        self._show_nominal_datas()
+        self._calculate_all_questions_stats()
+        self._katilimci_yas_araligi_ve_sayisi()
 
         print("A produced Data dict:")
         print(self.data[0])
         print("-" * 40)
 
-    def create_nominaldata_keywords(self):
+    def _create_nominaldata_keywords(self):
         for i in self.data:  #
             for key, value in zip(i.keys(), i.values()):
                 if type(value) is str:
@@ -59,18 +62,26 @@ class AnalyseSurvey:
                         self.data_set_dict.update({key: set()})
                     self.data_set_dict[key].add(value)
 
-    def show_nominal_datas(self):
+    def _show_nominal_datas(self):
         print("-" * 40)
         print("String veri ayıraçları:")
         for i in self.data_set_dict:
             print("\t", i, "types:", self.data_set_dict[i])
         print("-" * 40)
 
-    def calculate_statistics(self, qusetion):
+    def _calculate_statistics(self, qusetion, schooltype="all"):
         datas = list()
         for i in self.data:
-            datas.append(i.get(qusetion.upper()))
-        return {"mean": statistics.mean(datas),
+            if schooltype == "all":
+                datas.append(i.get(qusetion.upper()))
+            else:
+                if i.get("School Type") == schooltype:
+                    datas.append(i.get(qusetion.upper()))
+                else:
+                    pass
+
+        return {"schooltype": schooltype,
+                "mean": statistics.mean(datas),
                 "mode": statistics.mode(datas),
                 "stddev": statistics.stdev(datas),
                 "variance": statistics.variance(datas),
@@ -78,7 +89,7 @@ class AnalyseSurvey:
                 "harmonicmean": statistics.harmonic_mean(datas),
                 "quantiles": statistics.quantiles(datas, n=4, method="inclusive")}
 
-    def katilimci_yas_araligi_ve_sayisi(self):
+    def _katilimci_yas_araligi_ve_sayisi(self):
         # dict döndürür {yaş: bu yaştaki katılımcı sayısı}
         age_all = list()
         age_set = set()
@@ -91,21 +102,68 @@ class AnalyseSurvey:
         for i in age_all:
             age_ct_dict[str(i)] += 1
         self.AgeCt = age_ct_dict
-        pyplot.bar(list(age_ct_dict.keys()), list(age_ct_dict.values()))
+
+    def _calculate_all_questions_stats(self):
+        for i in self.questions:
+            self.QuestionStats.update({i: self._calculate_statistics(qusetion=i)})
+            self.QuestionStatsPrivate.update({i: self._calculate_statistics(qusetion=i, schooltype="Private")})
+            self.QuestionStatsState.update({i: self._calculate_statistics(qusetion=i, schooltype="State")})
+
+    def print_calulated_datas(self):
+        print("All statistics")
+        for key, value in zip(self.QuestionStats.keys(), self.QuestionStats.values()):
+            print(key, ": ", value)
+        print("-" * 40)
+        print("Statistics By school type")
+        for i in analiseobj.QuestionStatsState:
+            print(i, ": ", self.QuestionStatsState.get(i))
+            print(i, ": ", self.QuestionStatsPrivate.get(i))
+            print("*" * 10)
+        print("-" * 40)
+        print("Survey yaş aralığı dağılımı")
+        print(self.AgeCt)
+        print("-" * 40)
+
+
+class Graping:
+    StatistcsObj = AnalyseSurvey
+
+    def __init__(self, Statistics):
+        self.StatistcsObj = Statistics
+
+    def drawagect(self):
+        pyplot.bar(list(self.StatistcsObj.AgeCt.keys()), list(self.StatistcsObj.AgeCt.values()))
         pyplot.ylabel("Count")
         pyplot.xlabel("Age")
         pyplot.margins(y=0.1)
-        pyplot.show()
+        pyplot.savefig("KatilimciYasSayisi.png")
+        pyplot.close()
 
-    def calculate_all_questions_stats(self):
-        for i in self.questions:
-            self.QuestionStats.update({i: self.calculate_statistics(qusetion=i)})
+    def draw_questions_by_school_type(self):
+        for i in self.StatistcsObj.QuestionStats:
+            mean = [self.StatistcsObj.QuestionStatsPrivate[i]["mean"], self.StatistcsObj.QuestionStatsState[i]["mean"]]
+            stddev = [self.StatistcsObj.QuestionStatsPrivate[i]["stddev"], self.StatistcsObj.QuestionStatsState[i]["stddev"]]
+            pyplot.bar(["Private", "State"], mean)
+            pyplot.ylabel("mean")
+            pyplot.xlabel("SchoolType")
+            pyplot.title(i)
+            pyplot.margins(y=0.1)
+            pyplot.savefig("mean"+i+"_devlet-vs-ozel.png")
+            pyplot.close()
+            pyplot.bar(["Private", "State"], stddev)
+            pyplot.ylabel("StdDev")
+            pyplot.xlabel("SchoolType")
+            pyplot.title(i)
+            pyplot.margins(y=0.1)
+            pyplot.savefig("StdDev" + i + "_devlet-vs-ozel.png")
+            pyplot.close()
 
 
 if __name__ == "__main__":
     analiseobj = AnalyseSurvey()
-    for key, value in zip(analiseobj.QuestionStats.keys(), analiseobj.QuestionStats.values()):
-        print(key, ": ", value)
-    print("-"*40)
-    analiseobj.katilimci_yas_araligi_ve_sayisi()
-    print(analiseobj.AgeCt)
+    analiseobj.print_calulated_datas()
+    graphobj = Graping(analiseobj)
+    graphobj.drawagect()
+    graphobj.draw_questions_by_school_type()
+
+
