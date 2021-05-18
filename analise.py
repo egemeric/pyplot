@@ -170,7 +170,7 @@ class Graping:
                           xtitle="Age", ytitle="DataCount", gtitle="Count by Age",
                           fname="KatilimciYasSayisi.png")
 
-    def savedrawplot(self, x, y, xtitle, ytitle, gtitle, fname): #barplt
+    def savedrawplot(self, x, y, xtitle, ytitle, gtitle, fname):  # barplt
         pyplot.bar(x, y)
         pyplot.ylabel(ytitle)
         pyplot.xlabel(xtitle)
@@ -178,12 +178,13 @@ class Graping:
         pyplot.margins(y=0.1)
         pyplot.savefig(fname)
         pyplot.close()
-    def savehistogram(self,x,xtitle, gtitle, fname):
-        pyplot.xticks(range(min(x),max(x)+1))
+
+    def savehistogram(self, x, xtitle, gtitle, fname):
+        pyplot.xticks(range(min(x), max(x) + 1))
         pyplot.xlabel(xtitle)
         pyplot.ylabel("People Count")
         pyplot.title(gtitle)
-        pyplot.hist(x,color="green")
+        pyplot.hist(x, color="green")
         pyplot.savefig(fname)
         pyplot.close()
 
@@ -217,16 +218,17 @@ class Graping:
                               xtitle="Gender", ytitle="mean", gtitle="mean_by_gender->" + i,
                               fname="mean" + i + "_by_gender.png")
             self.savedrawplot(x=["Male", "Female", "Other"], y=stddev,
-                              xtitle="Gender", ytitle="stddev", gtitle="mean_by_gender->" + i,
+                              xtitle="Gender", ytitle="stddev", gtitle="stddev_by_gender->" + i,
                               fname="stdDev" + i + "_by_gender.png")
+
     def draw_qestions_histogram(self):
-        questiondatas=list()
+        questiondatas = list()
         for question in self.StatistcsObj.questions:
             for j in self.StatistcsObj.data:
                 questiondatas.append(j[question])
-            self.savehistogram(x=questiondatas,xtitle="Student Selection", gtitle=question+" Histogram", fname=question+"-histogram.png")
+            self.savehistogram(x=questiondatas, xtitle="Student Selection", gtitle=question + " Histogram",
+                               fname=question + "-histogram.png")
             questiondatas = []
-
 
 
 if __name__ == "__main__":
