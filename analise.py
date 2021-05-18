@@ -42,6 +42,10 @@ class AnalyseSurvey:
     QuestionStatsPrivate = dict()
     QuestionStatsState = dict()
     AgeCt = dict()
+    MaleFemaleCt = {"Male": 0, "Female": 0, "Other": 0}
+    QuestionStatsMale = dict()
+    QuestionStatsFemale = dict()
+    QuestionStatsOther = dict()
 
     def __init__(self):
         self.data = create_dict(read_csv_file())
@@ -49,6 +53,7 @@ class AnalyseSurvey:
         self._show_nominal_datas()
         self._calculate_all_questions_stats()
         self._katilimci_yas_araligi_ve_sayisi()
+        self._calculate_gender_ct()
 
         print("A produced Data dict:")
         print(self.data[0])
@@ -69,18 +74,35 @@ class AnalyseSurvey:
             print("\t", i, "types:", self.data_set_dict[i])
         print("-" * 40)
 
-    def _calculate_statistics(self, qusetion, schooltype="all"):
+    def _calculate_gender_ct(self):
+        for i in self.data:
+            if i["Gender"] == "Male":
+                self.MaleFemaleCt["Male"] += 1
+            elif i["Gender"] == "Female":
+                self.MaleFemaleCt["Female"] += 1
+            else:
+                self.MaleFemaleCt["Other"] += 1
+
+    def _calculate_statistics(self, qusetion, schooltype="all", gender="all", age="all"):
         datas = list()
         for i in self.data:
-            if schooltype == "all":
+            if schooltype == "all" and gender == "all" and gender == "all":
                 datas.append(i.get(qusetion.upper()))
-            else:
+            elif schooltype != "all":
                 if i.get("School Type") == schooltype:
                     datas.append(i.get(qusetion.upper()))
                 else:
                     pass
+            elif gender != "all":
+                if i["Gender"] == gender:
+                    datas.append(i.get(qusetion.upper()))
+                else:
+                    pass
+            else:
+                continue
 
         return {"schooltype": schooltype,
+                "gender": gender,
                 "mean": statistics.mean(datas),
                 "mode": statistics.mode(datas),
                 "stddev": statistics.stdev(datas),
@@ -108,6 +130,10 @@ class AnalyseSurvey:
             self.QuestionStats.update({i: self._calculate_statistics(qusetion=i)})
             self.QuestionStatsPrivate.update({i: self._calculate_statistics(qusetion=i, schooltype="Private")})
             self.QuestionStatsState.update({i: self._calculate_statistics(qusetion=i, schooltype="State")})
+            self.QuestionStatsMale.update({i: self._calculate_statistics(qusetion=i, gender="Male")})
+            self.QuestionStatsFemale.update({i: self._calculate_statistics(qusetion=i, gender="Female")})
+            self.QuestionStatsOther.update(
+                {i: self._calculate_statistics(qusetion=i, gender="I do not want to indicate")})
 
     def print_calulated_datas(self):
         print("All statistics")
@@ -123,6 +149,14 @@ class AnalyseSurvey:
         print("Survey yaş aralığı dağılımı")
         print(self.AgeCt)
         print("-" * 40)
+        print("Katılımcı Cinsiyet Profili")
+        print(self.MaleFemaleCt)
+        print("-" * 40)
+        print("Statistics By Gender")
+        for i in self.QuestionStats:
+            print(i + "\n\t MALE:", self.QuestionStatsMale[i], "\n\t FAMALE:", self.QuestionStatsFemale[i],
+                  "\n\t OTHER", self.QuestionStatsOther[i])
+            print("*" * 10)
 
 
 class Graping:
@@ -132,31 +166,51 @@ class Graping:
         self.StatistcsObj = Statistics
 
     def drawagect(self):
-        pyplot.bar(list(self.StatistcsObj.AgeCt.keys()), list(self.StatistcsObj.AgeCt.values()))
-        pyplot.ylabel("Count")
-        pyplot.xlabel("Age")
+        self.savedrawplot(x=list(self.StatistcsObj.AgeCt.keys()), y=list(self.StatistcsObj.AgeCt.values()),
+                          xtitle="Age", ytitle="DataCount", gtitle="Count by Age",
+                          fname="KatilimciYasSayisi.png")
+
+    def savedrawplot(self, x, y, xtitle, ytitle, gtitle, fname):
+        pyplot.bar(x, y)
+        pyplot.ylabel(ytitle)
+        pyplot.xlabel(xtitle)
+        pyplot.title(gtitle)
         pyplot.margins(y=0.1)
-        pyplot.savefig("KatilimciYasSayisi.png")
+        pyplot.savefig(fname)
         pyplot.close()
 
     def draw_questions_by_school_type(self):
         for i in self.StatistcsObj.QuestionStats:
             mean = [self.StatistcsObj.QuestionStatsPrivate[i]["mean"], self.StatistcsObj.QuestionStatsState[i]["mean"]]
-            stddev = [self.StatistcsObj.QuestionStatsPrivate[i]["stddev"], self.StatistcsObj.QuestionStatsState[i]["stddev"]]
-            pyplot.bar(["Private", "State"], mean)
-            pyplot.ylabel("mean")
-            pyplot.xlabel("SchoolType")
-            pyplot.title(i)
-            pyplot.margins(y=0.1)
-            pyplot.savefig("mean"+i+"_devlet-vs-ozel.png")
-            pyplot.close()
-            pyplot.bar(["Private", "State"], stddev)
-            pyplot.ylabel("StdDev")
-            pyplot.xlabel("SchoolType")
-            pyplot.title(i)
-            pyplot.margins(y=0.1)
-            pyplot.savefig("StdDev" + i + "_devlet-vs-ozel.png")
-            pyplot.close()
+            stddev = [self.StatistcsObj.QuestionStatsPrivate[i]["stddev"],
+                      self.StatistcsObj.QuestionStatsState[i]["stddev"]]
+            self.savedrawplot(x=["Private", "State"], y=mean,
+                              xtitle="School Type", ytitle="mean", gtitle="mean-state-vs-private-schools->" + i,
+                              fname="mean" + i + "_devlet-vs-ozel.png")
+            self.savedrawplot(x=["Private", "State"], y=stddev,
+                              xtitle="School Type", ytitle="StdDev", gtitle="StdDev-state-vs-private-schools->" + i,
+                              fname="StdDev" + i + "_devlet-vs-ozel.png")
+
+    def draw_gender_profiles_ct(self):
+        self.savedrawplot(x=list(self.StatistcsObj.MaleFemaleCt.keys()),
+                          y=list(self.StatistcsObj.MaleFemaleCt.values()),
+                          xtitle="Gender", ytitle="DataCount", gtitle="GenderCount",
+                          fname="KatilimciCinsisyetsayisi.png")
+
+    def draw_questions_by_gender(self):
+        for i in self.StatistcsObj.QuestionStats:
+            mean = [self.StatistcsObj.QuestionStatsMale[i]["mean"],
+                    self.StatistcsObj.QuestionStatsFemale[i]["mean"],
+                    self.StatistcsObj.QuestionStatsOther[i]["mean"]]
+            stddev = [self.StatistcsObj.QuestionStatsMale[i]["stddev"],
+                      self.StatistcsObj.QuestionStatsFemale[i]["stddev"],
+                      self.StatistcsObj.QuestionStatsOther[i]["stddev"]]
+            self.savedrawplot(x=["Male", "Female", "Other"], y=mean,
+                              xtitle="Gender", ytitle="mean", gtitle="mean_by_gender->" + i,
+                              fname="mean" + i + "_by_gender.png")
+            self.savedrawplot(x=["Male", "Female", "Other"], y=stddev,
+                              xtitle="Gender", ytitle="stddev", gtitle="mean_by_gender->" + i,
+                              fname="stdDev" + i + "_by_gender.png")
 
 
 if __name__ == "__main__":
@@ -165,5 +219,5 @@ if __name__ == "__main__":
     graphobj = Graping(analiseobj)
     graphobj.drawagect()
     graphobj.draw_questions_by_school_type()
-
-
+    graphobj.draw_gender_profiles_ct()
+    graphobj.draw_questions_by_gender()
