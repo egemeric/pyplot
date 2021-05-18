@@ -170,12 +170,20 @@ class Graping:
                           xtitle="Age", ytitle="DataCount", gtitle="Count by Age",
                           fname="KatilimciYasSayisi.png")
 
-    def savedrawplot(self, x, y, xtitle, ytitle, gtitle, fname):
+    def savedrawplot(self, x, y, xtitle, ytitle, gtitle, fname): #barplt
         pyplot.bar(x, y)
         pyplot.ylabel(ytitle)
         pyplot.xlabel(xtitle)
         pyplot.title(gtitle)
         pyplot.margins(y=0.1)
+        pyplot.savefig(fname)
+        pyplot.close()
+    def savehistogram(self,x,xtitle, gtitle, fname):
+        pyplot.xticks(range(min(x),max(x)+1))
+        pyplot.xlabel(xtitle)
+        pyplot.ylabel("People Count")
+        pyplot.title(gtitle)
+        pyplot.hist(x,color="green")
         pyplot.savefig(fname)
         pyplot.close()
 
@@ -211,13 +219,22 @@ class Graping:
             self.savedrawplot(x=["Male", "Female", "Other"], y=stddev,
                               xtitle="Gender", ytitle="stddev", gtitle="mean_by_gender->" + i,
                               fname="stdDev" + i + "_by_gender.png")
+    def draw_qestions_histogram(self):
+        questiondatas=list()
+        for question in self.StatistcsObj.questions:
+            for j in self.StatistcsObj.data:
+                questiondatas.append(j[question])
+            self.savehistogram(x=questiondatas,xtitle="Student Selection", gtitle=question+" Histogram", fname=question+"-histogram.png")
+            questiondatas = []
+
 
 
 if __name__ == "__main__":
     analiseobj = AnalyseSurvey()
     analiseobj.print_calulated_datas()
     graphobj = Graping(analiseobj)
-    graphobj.drawagect()
-    graphobj.draw_questions_by_school_type()
-    graphobj.draw_gender_profiles_ct()
-    graphobj.draw_questions_by_gender()
+    graphobj.draw_qestions_histogram()
+    #raphobj.drawagect()
+    #graphobj.draw_questions_by_school_type()
+    #graphobj.draw_gender_profiles_ct()
+    #graphobj.draw_questions_by_gender()
