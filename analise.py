@@ -46,13 +46,16 @@ class AnalyseSurvey:
     QuestionStatsMale = dict()
     QuestionStatsFemale = dict()
     QuestionStatsOther = dict()
+    QuestionStatsAge = dict()
 
     def __init__(self):
         self.data = create_dict(read_csv_file())
         self._create_nominaldata_keywords()
         self._show_nominal_datas()
-        self._calculate_all_questions_stats()
         self._katilimci_yas_araligi_ve_sayisi()
+        for age in list(self.AgeCt.keys()):
+            self.QuestionStatsAge[age] = dict()
+        self._calculate_all_questions_stats()
         self._calculate_gender_ct()
 
         print("A produced Data dict:")
@@ -83,7 +86,7 @@ class AnalyseSurvey:
             else:
                 self.MaleFemaleCt["Other"] += 1
 
-    def _calculate_statistics(self, qusetion, schooltype="all", gender="all", age="all"):
+    def _calculate_statistics(self, qusetion, schooltype="all", gender="all"):
         datas = list()
         for i in self.data:
             if schooltype == "all" and gender == "all" and gender == "all":
@@ -104,6 +107,21 @@ class AnalyseSurvey:
         return {"schooltype": schooltype,
                 "gender": gender,
                 "mean": statistics.mean(datas),
+                "mode": statistics.mode(datas),
+                "stddev": statistics.stdev(datas),
+                "variance": statistics.variance(datas),
+                "median": statistics.median(datas),
+                "harmonicmean": statistics.harmonic_mean(datas),
+                "quantiles": statistics.quantiles(datas, n=4, method="inclusive")}
+
+    def _calculate_statistics_age(self, question, age):
+        datas = list()
+        for i in self.data:
+            if i["Age"] == age:
+                datas.append(i[question.upper()])
+        if len(datas) == 1:
+            datas.append(datas[0])
+        return {"mean": statistics.mean(datas),
                 "mode": statistics.mode(datas),
                 "stddev": statistics.stdev(datas),
                 "variance": statistics.variance(datas),
@@ -134,6 +152,18 @@ class AnalyseSurvey:
             self.QuestionStatsFemale.update({i: self._calculate_statistics(qusetion=i, gender="Female")})
             self.QuestionStatsOther.update(
                 {i: self._calculate_statistics(qusetion=i, gender="I do not want to indicate")})
+            for age in list(self.AgeCt.keys()):
+                self.QuestionStatsAge[age].update({i: self._calculate_statistics_age(question=i, age=int(age))})
+
+    def get_questionsbyAge(self, datatype="mean"):
+        temp = dict()
+        temp2 = dict()
+        for question in analiseobj.questions:
+            for age in list(self.QuestionStatsAge.keys()):
+                temp[age] = (self.QuestionStatsAge[age][question][datatype])
+            temp2[question] = temp
+            temp = {}
+        return temp2  # tum yas aralıklarının sonucunu soru soru döndürürü {soru:{yas:istenilen veri, yas:istenilen veri,...},soru:{...},...}
 
     def print_calulated_datas(self):
         print("All statistics")
@@ -157,6 +187,9 @@ class AnalyseSurvey:
             print(i + "\n\t MALE:", self.QuestionStatsMale[i], "\n\t FAMALE:", self.QuestionStatsFemale[i],
                   "\n\t OTHER", self.QuestionStatsOther[i])
             print("*" * 10)
+        print("-" * 40)
+        print("Statistics by Age")
+        print(self.QuestionStatsAge)
 
 
 class Graping:
@@ -230,11 +263,27 @@ class Graping:
                                fname=question + "-histogram.png")
             questiondatas = []
 
+    def draw_questions_age(self):
+        mean = self.StatistcsObj.get_questionsbyAge(datatype="mean")
+        stddev = self.StatistcsObj.get_questionsbyAge(datatype="stddev")
+        for question in self.StatistcsObj.questions:
+            x = list(mean[question].keys())
+            ymean = list(mean[question].values())
+            ystddev = list(stddev[question].values())
+            self.savedrawplot(x=x, y=ymean,
+                              xtitle="Age", ytitle="mean", gtitle=question + " mean by age",
+                              fname="mean" + question + "_age_by_age.png")
+            self.savedrawplot(x=x, y=ystddev,
+                              xtitle="Age", ytitle="mean", gtitle=question + " stddev by age",
+                              fname="StdDev" + question + "_age_by_age.png")
+
 
 if __name__ == "__main__":
     analiseobj = AnalyseSurvey()
+    print(analiseobj.AgeCt)
     analiseobj.print_calulated_datas()
     graphobj = Graping(analiseobj)
+    graphobj.draw_questions_age()
     graphobj.drawagect()
     graphobj.draw_questions_by_school_type()
     graphobj.draw_gender_profiles_ct()
